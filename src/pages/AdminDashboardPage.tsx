@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useAuth } from '../hooks/useAuth';
+import { useState, useEffect } from 'react';
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
@@ -216,3 +217,101 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
+const = useState<any[]>([]); // Top referrers list
+const = useState(0); // Total commissions paid
+const = useState<any[]>([]); // All referral tree (top-level)
+
+useEffect(() => {
+  const fetchReferralOverview = async () => {
+    try {
+      // Total commissions paid (from referrals table)
+      const { data: comms } = await supabase
+        .from('referrals')
+        .select('commission_amount')
+        .eq('commission_locked_until', null); // Unlocked ones
+
+      const total = comms?.reduce((sum, r) => sum + (r.commission_amount || 0), 0) || 0;
+      setTotalCommissions(total);
+
+      // Top 10 referrers (by total commission)
+      const { data: top } = await supabase
+        .from('referrals')
+        .select('referred_by, sum(commission_amount) as total')
+        .group('referred_by')
+        .order('total', { ascending: false })
+        .limit(10);
+
+      const topUsers = await Promise.all(top.map(async r => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', r.referred_by)
+          .single();
+        return { email: profile?.email, total: r.total };
+      }));
+
+      setTopReferrers(topUsers);
+
+      // Full referral tree (top-level only, expandable)
+      const { data: tree } = await supabase.rpc('get_full_referral_tree'); // New RPC
+      setReferralTree(tree || []);
+    } catch (err) {
+      toast.error('Failed to load referral overview');
+    }
+  };
+
+  fetchReferralOverview();
+}, );
+
+// ... after Broadcast section, add this:
+<div className="bg-gray-800 p-6 rounded-lg">
+  <h2 className="text-2xl font-bold text-yellow-400 mb-4">Referral Overview</h2>
+
+  {/* Total Stats */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="bg-black p-6 rounded-lg text-center">
+      <p className="text-sm text-gray-400">Total Commissions Paid</p>
+      <p className="text-3xl font-bold text-green-400">{totalCommissions.toFixed(2)} USDT</p>
+    </div>
+    <div className="bg-black p-6 rounded-lg text-center">
+      <p className="text-sm text-gray-400">Active Referrers</p>
+      <p className="text-3xl font-bold">{topReferrers.length}</p>
+    </div>
+    <div className="bg-black p-6 rounded-lg text-center">
+      <p className="text-sm text-gray-400">Pending Locks</p>
+      <p className="text-3xl font-bold text-yellow-400">
+        {referralTree.reduce((sum, r) => sum + r.children.length, 0)} referrals
+      </p>
+    </div>
+  </div>
+
+  {/* Top Referrers */}
+  <div className="mb-8">
+    <h3 className="text-xl mb-4">Top 10 Referrers</h3>
+    <ul className="space-y-2">
+      {topReferrers.map((r, i) => (
+        <li key={i} className="flex justify-between bg-gray-700 p-3 rounded">
+          <span>{r.email}</span>
+          <span className="text-green-400">{r.total.toFixed(2)} USDT</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {/* Referral Tree */}
+  <div>
+    <h3 className="text-xl mb-4">All Referral Trees</h3>
+    {referralTree.length === 0 ? (
+      <p className="text-gray-400">No referrals yet.</p>
+    ) : (
+      referralTree.map(root => (
+        <ReferralNode 
+          key={root.user.email} 
+          user={{ ...root.user, level: 0 }} 
+          children={root.children} 
+        />
+      ))
+    )}
+  </div>
+</div>
