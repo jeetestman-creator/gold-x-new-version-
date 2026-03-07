@@ -11,6 +11,15 @@ export default function SignupPage() {
   const = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+      toast.success('Referral code applied!');
+    }
+  }, []); // Empty dependency array — runs once on mount
+
   const handleSignup = async () => {
     if (!email.trim() || !password.trim()) {
       return toast.error('Email & Password required');
