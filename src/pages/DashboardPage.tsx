@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import QRCode from 'react-qr-code';
 import { format, differenceInDays } from 'date-fns';
 import { useAuth } from '../hooks/useAuth';
+import ReferralNode from '../components/ReferralNode';
+
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -162,3 +164,43 @@ export default function DashboardPage() {
     </div>
   );
 }
+const = useState<any[]>([]); // Tree data: array of level 1 nodes
+
+useEffect(() => {
+  const fetchReferralTree = async () => {
+    try {
+      // Get all referrals for this user (recursive query via RPC)
+      const { data, error } = await supabase.rpc('get_referral_tree', {
+        root_user_id: user?.id
+      });
+
+      if (error) throw error;
+
+      setReferralTree(data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load referral tree');
+    }
+  };
+
+  if (user) fetchReferralTree();
+}, );
+
+// ... after Referral Earnings card
+<div className="bg-gray-800 p-6 rounded-lg">
+  <h3 className="text-xl font-bold mb-4">Your Referral Tree</h3>
+  
+  {referralTree.length === 0 ? (
+    <p className="text-gray-400">No referrals yet. Share your link!</p>
+  ) : (
+    <div className="space-y-4">
+      {referralTree.map(node => (
+        <ReferralNode 
+          key={node.email} 
+          user={{ email: node.email, balance: node.balance, level: 1 }} 
+          children={node.children || []} 
+        />
+      ))}
+    </div>
+  )}
+</div>
