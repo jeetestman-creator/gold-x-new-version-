@@ -104,6 +104,67 @@ export default function DepositConfirm({ amount, network, onClose }: DepositConf
             Confirm Deposit
           </button>
         </div>
+        const handleConfirm = async () => {
+  if (!txHash.trim()) {
+    return toast.error('Please enter transaction hash');
+  }
+
+  if (amount < 100) {
+    return toast.error('Minimum deposit is 100 USDT');
+  }
+
+  setLoading(true); // optional loading state
+
+  try {
+    // 1. Insert deposit record
+    const { data: newDeposit, error } = await supabase
+      .from('deposits')
+      .insert({
+        user_id: user?.id,
+        amount,
+        network,
+        tx_hash: txHash.trim(),
+        status: 'pending',
+        fee: amount * 0.05,
+        net_amount: amount * 0.95
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    const newDepositId = newDeposit.id;
+
+    // 2. Call auto-detect endpoint based on network
+    let detectUrl = '';
+    if (network === 'TRC20') {
+      detectUrl = 'https://your-project.supabase.co/functions/v1/auto-detect-deposit';
+    } else if (network === 'BEP20') {
+      detectUrl = 'https://your-project.supabase.co/functions/v1/auto-detect-bep20';
+    }
+
+    if (detectUrl) {
+      const detectRes = await fetch(detectUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deposit_id: newDepositId, tx_hash: txHash.trim() })
+      });
+
+      if (!detectRes.ok) {
+        const err = await detectRes.json();
+        throw new Error(err.error || 'Auto-detection failed');
+      }
+    }
+
+    toast.success('Deposit submitted & auto-verification started!');
+    onClose(); // close modal
+  } catch (err) {
+    console.error(err);
+    toast.error(err.message || 'Failed to submit deposit');
+  } finally {
+    setLoading(false);
+  }
+};
 
         <p className="text-xs text-gray-400 mt-6 text-center">
           Deposits are processed manually or auto-detected. Confirmation may take 10–60 mins.
