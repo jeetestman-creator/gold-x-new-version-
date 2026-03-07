@@ -187,6 +187,7 @@ useEffect(() => {
 }, );
 
 // ... after Referral Earnings card
+<ReferralLinkGenerator />
 <div className="bg-gray-800 p-6 rounded-lg">
   <h3 className="text-xl font-bold mb-4">Your Referral Tree</h3>
   
