@@ -15,6 +15,8 @@ function App() {
       <div className="container mx-auto p-4">
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/reset-password" element={<ForgotPasswordPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/otp" element={<OTPVerificationPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
