@@ -1,12 +1,10 @@
 {
-  "name": "golden-wealth-hub",
+  "name": "gold-x-app",
   "private": true,
   "version": "0.0.1",
 "scripts": {
   "dev": "vite",
-  "build": "tsc --noEmit && vite build",
-  "preview": "vite preview",
- 
+  "build": "vite build",
 }
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
