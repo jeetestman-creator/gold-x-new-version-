@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
+import { User } from '@supabase/supabase-js';
 
-export function useAuth() {
-  const = useState<any>(null);
-  const = useState(true);
+const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null);  // Fixed: Proper state init
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -12,17 +13,20 @@ export function useAuth() {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Logged out');
+    const { error } = await supabase.auth.signOut();
+    if (!error) toast.success('Logged out');
   };
 
   return { user, loading, logout };
-}
+};
+
+export default useAuth;
